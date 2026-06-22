@@ -6,7 +6,11 @@ import com.erp.module.system.dto.UserPageDTO;
 import com.erp.module.system.dto.UserSaveDTO;
 import com.erp.module.system.entity.SysUser;
 import com.erp.module.system.vo.UserVO;
+import com.erp.module.system.dto.LoginDTO;
+import com.erp.module.system.vo.MenuTreeVO;
 
+
+import java.util.List;
 import java.util.Set;
 
 public interface SysUserService extends IService<SysUser> {
@@ -45,4 +49,23 @@ public interface SysUserService extends IService<SysUser> {
      * @return 权限标识集合
      */
     Set<String> getUserPermSet(Long userId);
+    /**
+     * 用户分配角色
+     */
+    void assignRoles(Long userId, List<Long> roleIdList);
+
+    /**
+     * 重置用户密码，返回明文临时密码
+     */
+    String resetPassword(Long userId);
+
+    /**
+     * 用户登录，返回token
+     */
+    String login(LoginDTO dto);
+
+    /**
+     * 获取当前用户菜单树
+     */
+    List<MenuTreeVO> getUserMenuTree(Long userId);
 }
