@@ -19,10 +19,9 @@ public class PermissionInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
-        if (!(handler instanceof HandlerMethod)) {
+        if (!(handler instanceof HandlerMethod handlerMethod)) {
             return true;
         }
-        HandlerMethod handlerMethod = (HandlerMethod) handler;
         RequirePermission annotation = handlerMethod.getMethodAnnotation(RequirePermission.class);
         // 无注解 无需校验
         if (annotation == null) {

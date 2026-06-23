@@ -1,55 +1,71 @@
 package com.erp.common.aspect;
 
-import com.alibaba.fastjson2.JSON;
 import com.erp.common.annotation.OperationLog;
 import com.erp.module.system.entity.SysOperationLog;
 import com.erp.module.system.mapper.SysOperationLogMapper;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
-import javax.annotation.Resource;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 import javax.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
 
+@Slf4j
 @Aspect
 @Component
+@RequiredArgsConstructor
 public class OperationLogAspect {
-    @Resource
-    private SysOperationLogMapper operationLogMapper;
-    @Resource
-    private HttpServletRequest request;
+    private final SysOperationLogMapper logMapper;
 
-    // 修正：注解变量名与方法参数opLog对应，注解类OperationLog
-    @Around("@annotation(opLog)")
-    public Object around(ProceedingJoinPoint point, OperationLog opLog) throws Throwable {
+    @Around("@annotation(operationLog)")
+    public Object around(ProceedingJoinPoint jp, OperationLog operationLog) throws Throwable {
         long start = System.currentTimeMillis();
-        Long userId = (Long) request.getAttribute("loginUserId");
-        SysOperationLog log = new SysOperationLog();
-        log.setUserId(userId);
-        log.setModule(opLog.module());
-        log.setOperation(opLog.operation());
-        log.setRequestUrl(request.getRequestURI());
-        log.setRequestMethod(request.getMethod());
-        log.setRequestParams(JSON.toJSONString(point.getArgs()));
-        log.setIpAddress(getIp());
-        log.setCreateTime(LocalDateTime.now());
+        HttpServletRequest request = getRequest();
+        SysOperationLog sysLog = new SysOperationLog();
+        sysLog.setModule(operationLog.module());
+        sysLog.setOperation(operationLog.operation());
+        sysLog.setMethod(jp.getSignature().toShortString());
+        sysLog.setRequestUrl(request.getRequestURI());
+        sysLog.setRequestMethod(request.getMethod());
+        sysLog.setIpAddress(getClientIp(request));
+
+        Long userId = (Long) request.getAttribute("userId");
+        if (userId != null) sysLog.setUserId(userId);
+
         try {
-            Object result = point.proceed();
-            log.setResponseCode(200);
+            Object result = jp.proceed();
+            sysLog.setResponseCode(200);
             return result;
         } catch (Exception e) {
-            log.setResponseCode(500);
-            log.setErrorMsg(e.getMessage());
+            sysLog.setResponseCode(500);
+            sysLog.setErrorMsg(e.getMessage());
             throw e;
         } finally {
-            long cost = System.currentTimeMillis() - start;
-            log.setElapsedTime((int) cost);
-            operationLogMapper.insert(log);
+            sysLog.setElapsedTime((int)(System.currentTimeMillis() - start));
+            sysLog.setCreateTime(LocalDateTime.now());
+            saveLog(sysLog);
         }
     }
 
-    private String getIp() {
-        return request.getRemoteAddr();
+    @Async
+    public void saveLog(SysOperationLog log) {
+        logMapper.insert(log);
+    }
+
+    private HttpServletRequest getRequest() {
+        ServletRequestAttributes attr = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        assert attr != null;
+        return attr.getRequest();
+    }
+
+    private String getClientIp(HttpServletRequest request) {
+        String ip = request.getHeader("X-Forwarded-For");
+        if (ip == null || ip.isEmpty()) ip = request.getRemoteAddr();
+        return ip;
     }
 }

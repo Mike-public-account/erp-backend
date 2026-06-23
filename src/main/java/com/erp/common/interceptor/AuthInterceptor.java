@@ -31,7 +31,7 @@ public class AuthInterceptor implements HandlerInterceptor {
             throw new BusinessException(GlobalConstant.UNAUTHORIZED, "Token无效");
         }
         String redisKey = TOKEN_PREFIX + userId;
-        if (Boolean.FALSE.equals(redisTemplate.hasKey(redisKey))) {
+        if (!redisTemplate.hasKey(redisKey)) {
             throw new BusinessException(GlobalConstant.UNAUTHORIZED, "Token已过期，请重新登录");
         }
         // 存入request供后续使用

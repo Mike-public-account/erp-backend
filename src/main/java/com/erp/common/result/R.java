@@ -29,4 +29,5 @@ public class R<T> {
     public static <T> R<T> fail(String msg) {
         return new R<T>().setCode(500).setMsg(msg);
     }
+
 }
