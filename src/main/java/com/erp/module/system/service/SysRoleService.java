@@ -9,15 +9,12 @@ import com.erp.module.system.vo.RoleVO;
 import java.util.List;
 
 public interface SysRoleService extends IService<SysRole> {
-    /** 角色分页查询 */
+    // 分页查询角色
     Page<RoleVO> getRolePage(RolePageDTO dto);
-
-    /** 新增角色 */
+    // 新增角色
     void addRole(RoleSaveDTO dto);
-
-    /** 分配角色权限 */
+    // 角色分配权限
     void assignPermission(Long roleId, List<Long> permIdList);
-
-    /** 查询全部角色（下拉框） */
+    // 查询全部角色下拉
     List<RoleVO> listAllRole();
 }

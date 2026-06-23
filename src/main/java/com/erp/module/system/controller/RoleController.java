@@ -3,8 +3,8 @@ package com.erp.module.system.controller;
 import com.erp.common.annotation.OperationLog;
 import com.erp.common.annotation.RequirePermission;
 import com.erp.common.result.R;
+import com.erp.module.system.dto.RolePageDTO;
 import com.erp.module.system.dto.RoleSaveDTO;
-import com.erp.module.system.dto.UserPageDTO;
 import com.erp.module.system.service.SysRoleService;
 import com.erp.module.system.vo.RoleVO;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -21,7 +21,7 @@ public class RoleController {
 
     @GetMapping
     @RequirePermission("system:role:list")
-    public R<Page<RoleVO>> page(UserPageDTO dto) {
+    public R<Page<RoleVO>> page(RolePageDTO dto) {
         return R.ok(sysRoleService.getRolePage(dto));
     }
 

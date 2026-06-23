@@ -1,5 +1,6 @@
 package com.erp.module.system.service.impl;
 
+import cn.hutool.core.bean.BeanUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -18,10 +19,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> {
+public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> implements SysRoleService {
+
     private final SysRoleMapper roleMapper;
     private final SysRolePermissionMapper rolePermMapper;
 
@@ -34,9 +37,17 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> {
             wrapper.like(SysRole::getRoleName, dto.getKeyword())
                     .or().like(SysRole::getRoleCode, dto.getKeyword());
         }
+        wrapper.orderByDesc(SysRole::getCreateTime);
         Page<SysRole> entityPage = roleMapper.selectPage(page, wrapper);
-        // 自行转换 entity -> RoleVO
-        return null;
+
+        // entity 转 VO
+        List<RoleVO> voList = entityPage.getRecords().stream()
+                .map(role -> BeanUtil.copyProperties(role, RoleVO.class))
+                .collect(Collectors.toList());
+
+        Page<RoleVO> resultPage = new Page<>(entityPage.getCurrent(), entityPage.getSize(), entityPage.getTotal());
+        resultPage.setRecords(voList);
+        return resultPage;
     }
 
     @Override
@@ -50,7 +61,7 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> {
             throw new BusinessException(GlobalConstant.PARAM_ERR, "角色编码已存在");
         }
         SysRole role = new SysRole();
-        // BeanUtil.copyProperties(dto, role);
+        BeanUtil.copyProperties(dto, role);
         roleMapper.insert(role);
     }
 
@@ -75,7 +86,8 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> {
         LambdaQueryWrapper<SysRole> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(SysRole::getIsDeleted, GlobalConstant.NOT_DELETE);
         List<SysRole> list = roleMapper.selectList(wrapper);
-        // 转换VO返回
-        return null;
+        return list.stream()
+                .map(role -> BeanUtil.copyProperties(role, RoleVO.class))
+                .collect(Collectors.toList());
     }
 }

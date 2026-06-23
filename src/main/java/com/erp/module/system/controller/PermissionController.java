@@ -30,7 +30,7 @@ public class PermissionController {
     @GetMapping("/tree")
     @RequirePermission("system:perm:list")
     public R<List<PermissionTreeVO>> getPermissionTree() {
-        List<PermissionTreeVO> treeList = sysPermission.getPermissionTree();
+        List<PermissionTreeVO> treeList = sysPermissionService.getPermissionTree();
         return R.ok(treeList);
     }
 }
