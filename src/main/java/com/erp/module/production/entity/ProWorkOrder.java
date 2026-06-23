@@ -42,4 +42,7 @@ public class ProWorkOrder {
 
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
+    // 新增逻辑删除字段
+    @TableField(fill = FieldFill.INSERT)
+    private Integer isDeleted;
 }

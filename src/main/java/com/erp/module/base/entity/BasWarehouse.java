@@ -27,4 +27,6 @@ public class BasWarehouse {
 
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
+    @TableField(fill = FieldFill.INSERT)
+    private Integer isDeleted;
 }

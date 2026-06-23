@@ -4,6 +4,7 @@ import com.erp.module.inventory.dto.StockOccupyDTO;
 import com.erp.module.inventory.entity.InvPreoccupy;
 import com.erp.module.inventory.entity.InvStockRecord;
 import java.math.BigDecimal;
+import java.util.List;
 
 public interface StockService {
     /**
@@ -12,9 +13,15 @@ public interface StockService {
     void preOccupy(StockOccupyDTO dto);
 
     /**
-     * 释放预占（取消单据、超时）
+     * 释放预占（单条记录）
      */
     void releaseOccupy(InvPreoccupy record);
+
+    /**
+     * 根据单据refId批量释放该单据全部预占记录
+     * @param refId 工单/采购单/销售单ID
+     */
+    void releasePreoccupyByRef(Long refId);
 
     /**
      * 采购入库，计算加权平均成本
