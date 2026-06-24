@@ -1,4 +1,5 @@
 package com.erp.module.base.vo;
+
 import lombok.Data;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -12,7 +13,6 @@ public class BasMaterialVO {
     private String spec;
     private String unit;
     private Long categoryId;
-    private String categoryName; // 扩展分类名
     private BigDecimal currentStock;
     private BigDecimal lockedStock;
     private BigDecimal availableStock;
@@ -22,5 +22,4 @@ public class BasMaterialVO {
     private Integer status;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
-    // 剔除 isDeleted
 }

@@ -7,7 +7,9 @@ public class SalOrderItemVO {
     private Long id;
     private Long orderId;
     private Long materialId;
+    private String materialCode;    // 新增
     private String materialName;
+    private String unit;             // 新增
     private BigDecimal planQty;
     private BigDecimal shippedQty;
     private BigDecimal unitPrice;

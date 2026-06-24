@@ -1,7 +1,8 @@
 package com.erp.module.purchase.dto;
 
 import lombok.Data;
-import javax.validation.constraints.NotBlank;
+import javax.validation.Valid;
+import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.util.List;
@@ -22,7 +23,8 @@ public class PurchaseOrderDTO {
     private String remark;
 
     /** 采购明细列表 */
-    @NotBlank(message = "采购明细不能为空")
+    @NotEmpty(message = "采购明细不能为空")
+    @Valid // 嵌套校验明细内部字段
     private List<Item> itemList;
 
     @Data

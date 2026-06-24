@@ -2,6 +2,7 @@ package com.erp.module.production.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.erp.common.constant.GlobalConstant;
@@ -12,6 +13,8 @@ import com.erp.module.base.entity.BasWarehouse;
 import com.erp.module.base.mapper.BasMaterialMapper;
 import com.erp.module.base.mapper.BasWarehouseMapper;
 import com.erp.module.inventory.dto.StockOccupyDTO;
+import com.erp.module.inventory.entity.InvPreoccupy;
+import com.erp.module.inventory.mapper.InvPreoccupyMapper;
 import com.erp.module.inventory.service.StockService;
 import com.erp.module.production.constant.ProductionOrderStatusEnum;
 import com.erp.module.production.dto.WorkOrderFinishDTO;
@@ -25,6 +28,7 @@ import com.erp.module.production.mapper.ProWorkOrderMaterialMapper;
 import com.erp.module.production.service.ProBomService;
 import com.erp.module.production.service.ProWorkOrderService;
 import com.erp.module.production.vo.BomVO;
+import com.erp.module.production.vo.WorkOrderExportVO;
 import com.erp.module.production.vo.WorkOrderMaterialVO;
 import com.erp.module.production.vo.WorkOrderVO;
 import lombok.RequiredArgsConstructor;
@@ -48,6 +52,7 @@ public class ProWorkOrderServiceImpl extends ServiceImpl<ProWorkOrderMapper, Pro
     private final BasMaterialMapper basMaterialMapper;
     private final BasWarehouseMapper warehouseMapper;
     private final StockService stockService;
+    private final InvPreoccupyMapper preoccupyMapper;
 
     @Override
     public Page<WorkOrderVO> workOrderPage(WorkOrderPageDTO dto) {
@@ -123,7 +128,7 @@ public class ProWorkOrderServiceImpl extends ServiceImpl<ProWorkOrderMapper, Pro
             StockOccupyDTO occupyDTO = new StockOccupyDTO();
             occupyDTO.setMaterialId(bom.getRawMaterialId());
             occupyDTO.setWarehouseId(dto.getWarehouseId());
-            occupyDTO.setOccupyQty(requireQty);
+            occupyDTO.setQty(requireQty);
             occupyDTO.setRefId(orderId);
             occupyDTO.setRefType("PRO_WORK_ORDER"); // 单据类型标记生产工单
             stockService.preOccupy(occupyDTO);
@@ -193,18 +198,6 @@ public class ProWorkOrderServiceImpl extends ServiceImpl<ProWorkOrderMapper, Pro
         // 修复1：替换不存在的 selectByOrderId
         LambdaQueryWrapper<ProWorkOrderMaterial> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(ProWorkOrderMaterial::getWorkOrderId, dto.getWorkOrderId());
-        List<ProWorkOrderMaterial> materialList = orderMaterialMapper.selectList(wrapper);
-
-        // 修复2：接口无releasePreoccupyByRef，两种处理方式二选一
-        // 方式A（推荐，先给StockService加default批量方法）
-        // stockService.releasePreoccupyByRef(order.getId());
-        // 方式B（不改动库存接口，业务层自行查询释放）
-    /*
-    List<InvPreoccupy> preList = invPreoccupyMapper.selectByRefId(order.getId());
-    for (InvPreoccupy pre : preList) {
-        stockService.releaseOccupy(pre);
-    }
-    */
 
         // 加权计算单件原料成本
         BigDecimal unitCost = order.getTotalMaterialCost()
@@ -217,7 +210,9 @@ public class ProWorkOrderServiceImpl extends ServiceImpl<ProWorkOrderMapper, Pro
                 dto.getActualQty(),
                 unitCost,
                 "PRO_WORK_ORDER",
-                order.getId()
+                order.getId(),
+                null,
+                order.getCreatorId()
         );
 
         // 更新工单
@@ -289,5 +284,58 @@ public class ProWorkOrderServiceImpl extends ServiceImpl<ProWorkOrderMapper, Pro
         }).collect(Collectors.toList());
         vo.setMaterialList(materialVOList);
         return vo;
+    }
+    @Override
+    public List<WorkOrderExportVO> exportWorkOrder(WorkOrderPageDTO dto) {
+        LambdaQueryWrapper<ProWorkOrder> wrapper = new LambdaQueryWrapper<>();
+
+        // 工单编号模糊
+        if (StringUtils.hasText(dto.getWorkOrderNo())) {
+            wrapper.like(ProWorkOrder::getWorkOrderNo, dto.getWorkOrderNo());
+        }
+        // 产品ID
+        if (dto.getProductId() != null) {
+            wrapper.eq(ProWorkOrder::getProductId, dto.getProductId());
+        }
+        // 工单状态
+        if (dto.getOrderStatus() != null) {
+            wrapper.eq(ProWorkOrder::getOrderStatus, dto.getOrderStatus());
+        }
+        // 创建时间区间
+        if (dto.getStartTime() != null && dto.getEndTime() != null) {
+            wrapper.between(ProWorkOrder::getCreateTime, dto.getStartTime(), dto.getEndTime());
+        } else if (dto.getStartTime() != null) {
+            wrapper.ge(ProWorkOrder::getCreateTime, dto.getStartTime());
+        } else if (dto.getEndTime() != null) {
+            wrapper.le(ProWorkOrder::getCreateTime, dto.getEndTime());
+        }
+
+        wrapper.orderByDesc(ProWorkOrder::getCreateTime);
+        List<ProWorkOrder> list = baseMapper.selectList(wrapper);
+        return BeanUtil.copyToList(list, WorkOrderExportVO.class);
+    }
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void batchCancelWorkOrder(List<Long> orderIdList) {
+        // 1. 批量更新工单状态为4-已取消
+        LambdaUpdateWrapper<ProWorkOrder> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.in(ProWorkOrder::getId, orderIdList)
+                .set(ProWorkOrder::getOrderStatus, 4);
+        baseMapper.update(null, updateWrapper);
+
+        // 2. 批量查询工单对应的预出库记录，批量释放库存
+        List<InvPreoccupy> preList = preoccupyMapper.selectByRefIds("PROD_ORDER", orderIdList);
+        for (InvPreoccupy pre : preList) {
+            stockService.releaseOccupy(pre);
+        }
+
+        // 3. 批量同步物料Redis缓存
+        List<Long> materialIds = preList.stream()
+                .map(InvPreoccupy::getMaterialId)
+                .distinct()
+                .toList();
+        for (Long mid : materialIds) {
+            stockService.syncMaterialStockCache(basMaterialMapper.selectById(mid));
+        }
     }
 }

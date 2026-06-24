@@ -8,6 +8,9 @@ import java.time.LocalDateTime;
 @Data
 @TableName("fin_purchase_suggestion")
 public class FinPurchaseSuggestion {
+    public void test() {
+        this.getCurrentStock();
+    }
     @TableId(type = IdType.AUTO)
     private Long id;
 

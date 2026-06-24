@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.erp.module.inventory.mapper.InvStockRecordMapper">
+    <select id="selectTimeoutPreoccupy" resultType="com.erp.module.inventory.entity.InvPreoccupy">
+        SELECT * FROM inv_preoccupy
+        WHERE preoccupy_status = 1 AND preoccupy_type = #{preoccupyType} AND timeout_time &lt; #{now}
+    </select>
+</mapper>

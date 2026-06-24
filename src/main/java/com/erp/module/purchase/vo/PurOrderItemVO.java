@@ -15,4 +15,5 @@ public class PurOrderItemVO {
     private BigDecimal amount;
     private BigDecimal taxRate;
     private String remark;
+    private String unit;
 }

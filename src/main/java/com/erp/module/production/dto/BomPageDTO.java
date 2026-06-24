@@ -12,4 +12,6 @@ public class BomPageDTO {
     private Long pageSize = 10L;
     private Long productMaterialId;
     private String materialKeyword;
+    private Long productId; // 存成品物料ID
+    private Long materialId; // 存原料物料ID
 }

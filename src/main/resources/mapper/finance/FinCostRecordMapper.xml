@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.erp.module.finance.mapper.FinCostRecordMapper">
+
+    <select id="sumWorkOrderByRange" resultType="com.erp.module.finance.entity.FinCostRecord">
+        SELECT
+            product_id AS material_id,
+            SUM(plan_qty) AS total_input_qty,
+            SUM(total_material_cost) AS total_material_cost
+        FROM pro_work_order
+        WHERE actual_end_time BETWEEN #{start} AND #{end}
+          AND is_deleted = 0
+        GROUP BY product_id
+    </select>
+
+    <select id="sumSaleQty" resultType="java.math.BigDecimal">
+        SELECT IFNULL(SUM(shipped_qty), 0)
+        FROM sal_order_item soi
+                 LEFT JOIN sal_order so ON soi.order_id = so.id
+        WHERE soi.material_id = #{materialId}
+          AND so.create_time BETWEEN #{start} AND #{end}
+          AND so.is_deleted = 0
+    </select>
+
+    <select id="sumSaleAmount" resultType="java.math.BigDecimal">
+        SELECT IFNULL(SUM(soi.amount), 0)
+        FROM sal_order_item soi
+                 LEFT JOIN sal_order so ON soi.order_id = so.id
+        WHERE soi.material_id = #{materialId}
+          AND so.create_time BETWEEN #{start} AND #{end}
+          AND so.is_deleted = 0
+    </select>
+
+</mapper>

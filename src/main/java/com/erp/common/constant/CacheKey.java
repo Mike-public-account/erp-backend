@@ -7,4 +7,5 @@ public interface CacheKey {
     String MATERIAL_INFO = "erp:material:info:";
     long TOKEN_EXPIRE = 7 * 24 * 3600;
     long PERM_EXPIRE = 3600;
+    String STOCK_WARNING_CHANNEL = "channel:stock_warning";
 }

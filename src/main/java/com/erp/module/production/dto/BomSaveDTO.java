@@ -15,4 +15,6 @@ public class BomSaveDTO {
     private BigDecimal perUnitQty;
     private BigDecimal lossRate;
     private String remark;
+    private Long productId; // 存成品物料ID
+    private Long materialId; // 存原料物料ID
 }

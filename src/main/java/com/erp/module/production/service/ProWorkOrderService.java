@@ -7,7 +7,11 @@ import com.erp.module.production.dto.WorkOrderPageDTO;
 import com.erp.module.production.dto.WorkOrderPickDTO;
 import com.erp.module.production.dto.WorkOrderSaveDTO;
 import com.erp.module.production.entity.ProWorkOrder;
+import com.erp.module.production.vo.WorkOrderExportVO;
 import com.erp.module.production.vo.WorkOrderVO;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 public interface ProWorkOrderService extends IService<ProWorkOrder> {
     Page<WorkOrderVO> workOrderPage(WorkOrderPageDTO dto);
@@ -20,4 +24,9 @@ public interface ProWorkOrderService extends IService<ProWorkOrder> {
     void finishWorkOrder(WorkOrderFinishDTO dto);
     /** 取消工单，释放全部锁定原料库存 */
     void cancelWorkOrder(Long orderId);
+    // 新增工单导出方法，放在接口最末尾
+    List<WorkOrderExportVO> exportWorkOrder(WorkOrderPageDTO dto);
+
+    @Transactional(rollbackFor = Exception.class)
+    void batchCancelWorkOrder(List<Long> orderIdList);
 }
