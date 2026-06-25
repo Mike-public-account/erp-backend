@@ -58,9 +58,9 @@ public class ProBomServiceImpl extends ServiceImpl<ProBomMapper, ProBom>
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void saveBom(BomSaveDTO dto) {
-        Long productId = dto.getProductMaterialId();
-        Long rawMaterialId = dto.getRawMaterialId();
-        BigDecimal perUnitQty = dto.getPerUnitQty();
+        Long productId = dto.getProductId();
+        Long rawMaterialId = dto.getMaterialId();
+        BigDecimal perUnitQty = dto.getQtyPerUnit();
         BigDecimal lossRate = dto.getLossRate() == null ? BigDecimal.ZERO : dto.getLossRate();
         String remark = dto.getRemark();
 
