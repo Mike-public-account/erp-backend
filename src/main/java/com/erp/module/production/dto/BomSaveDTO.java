@@ -7,14 +7,19 @@ import java.math.BigDecimal;
 @Data
 public class BomSaveDTO {
     private Long id;
+
     @NotNull(message = "成品物料不能为空")
-    private Long productMaterialId;
+    private Long productId;
+
     @NotNull(message = "原料物料不能为空")
-    private Long rawMaterialId;
+    private Long materialId;
+
     @NotNull(message = "单件用料数量不能为空")
-    private BigDecimal perUnitQty;
+    private BigDecimal qtyPerUnit;
+
     private BigDecimal lossRate;
+
+    private String unit;
+
     private String remark;
-    private Long productId; // 存成品物料ID
-    private Long materialId; // 存原料物料ID
 }

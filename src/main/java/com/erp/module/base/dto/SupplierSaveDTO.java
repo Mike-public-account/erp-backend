@@ -9,6 +9,8 @@ import java.math.BigDecimal;
 @Data
 @ApiModel("供应商保存参数")
 public class SupplierSaveDTO {
+    @ApiModelProperty("供应商ID")
+    private Long id;
     @NotBlank(message = "供应商编码不能为空")
     private String supplierCode;
     @NotBlank(message = "供应商名称不能为空")

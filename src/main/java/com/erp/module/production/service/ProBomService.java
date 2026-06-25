@@ -6,6 +6,8 @@ import com.erp.module.production.dto.BomPageDTO;
 import com.erp.module.production.dto.BomSaveDTO;
 import com.erp.module.production.entity.ProBom;
 import com.erp.module.production.vo.BomVO;
+
+import java.math.BigDecimal;
 import java.util.List;
 
 public interface ProBomService extends IService<ProBom> {
@@ -14,4 +16,6 @@ public interface ProBomService extends IService<ProBom> {
     void updateBom(Long id, BomSaveDTO dto);
     BomVO getBomInfo(Long id);
     List<BomVO> getBomByProductId(Long productId);
+    void deleteBom(Long id);
+    BigDecimal calcProductBomCost(Long productId);
 }

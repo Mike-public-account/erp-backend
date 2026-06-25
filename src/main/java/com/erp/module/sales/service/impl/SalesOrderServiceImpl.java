@@ -80,11 +80,12 @@ public class SalesOrderServiceImpl extends ServiceImpl<SalOrderMapper, SalOrder>
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Long createOrder(SalesOrderSaveDTO dto) {
+    public Long createOrder(SalesOrderSaveDTO dto, Long loginUserId) {
         BasCustomer customer = customerMapper.selectById(dto.getCustomerId());
         BasWarehouse warehouse = warehouseMapper.selectById(dto.getWarehouseId());
-        Long salesmanId = SecurityUtil.getUserId();
-        // 主单
+        // 替换原有SecurityUtil.getUserId()，使用上层Controller传入的登录人ID
+        Long salesmanId = loginUserId;
+        // 下面原有逻辑完全不动
         SalOrder order = BeanCopyUtil.copy(dto, SalOrder.class);
         order.setOrderNo(OrderNoUtil.generate("SO"));
         order.setOrderStatus(SalesOrderStatusEnum.DRAFT.getCode());
@@ -142,7 +143,31 @@ public class SalesOrderServiceImpl extends ServiceImpl<SalOrderMapper, SalOrder>
         order.setOrderStatus(SalesOrderStatusEnum.CANCEL.getCode());
         updateById(order);
     }
-
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void shipGoods(Long orderId, Long warehouseId) {
+        // 简易发货入口，根据订单ID查询基础信息，构建空ShipDTO，适用于仅传仓库ID快速发货场景
+        SalesShipDTO shipDTO = new SalesShipDTO();
+        shipDTO.setOrderId(orderId);
+        // 查询当前订单明细填充到ShipDTO（需实现明细查询）
+        List<SalOrderItem> itemList = itemMapper.selectList(
+                new LambdaQueryWrapper<SalOrderItem>().eq(SalOrderItem::getOrderId, orderId)
+        );
+        List<SalesShipDTO.ShipItem> shipItems = itemList.stream().map(item -> {
+            SalesShipDTO.ShipItem si = new SalesShipDTO.ShipItem();
+            si.setItemId(item.getId());
+            // 默认全部剩余未发数量一次性出库
+            si.setShipQty(item.getPlanQty().subtract(item.getShippedQty()));
+            return si;
+        }).collect(Collectors.toList());
+        shipDTO.setItemList(shipItems);
+        // 物流信息可前端后续补充，这里给默认值
+        shipDTO.setLogisticsCompany("自提");
+        shipDTO.setTrackingNo("");
+        shipDTO.setFreightAmount(BigDecimal.ZERO);
+        // 调用原有完整DTO发货逻辑复用代码
+        shipGoods(shipDTO);
+    }
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void shipGoods(SalesShipDTO dto) {
@@ -207,8 +232,14 @@ public class SalesOrderServiceImpl extends ServiceImpl<SalOrderMapper, SalOrder>
     }
 
     @Override
-    public void exportExcel(HttpServletResponse response) throws IOException {
-        // ExcelUtil导出实现
+    public List<SalOrderVO> exportExcel(SalesOrderPageDTO dto, HttpServletResponse response) throws IOException {
+        // 1、按查询条件分页查询全部数据（不分页/超大分页导出）
+        dto.setPageNum((long)(1));
+        dto.setPageSize(Long.MAX_VALUE);
+        Page<SalOrderVO> voPage = pageList(dto);
+        List<SalOrderVO> dataList = voPage.getRecords();
+        // 内部只查询返回数据，导出Excel逻辑交给Controller统一调用ExcelUtil
+        return dataList;
     }
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -239,5 +270,41 @@ public class SalesOrderServiceImpl extends ServiceImpl<SalOrderMapper, SalOrder>
         }).collect(Collectors.toList());
         vo.setItemList(itemVos);
         return vo;
+    }
+    @Override
+    public Page<SalOrderVO> listCreditWarning(SalesOrderPageDTO dto) {
+        Page<SalOrder> page = new Page<>(dto.getPageNum(), dto.getPageSize());
+        LambdaQueryWrapper<SalOrder> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(SalOrder::getIsDeleted, 0);
+        // 预警条件：已出库、未结清货款、当前日期超过客户账期
+        wrapper.in(SalOrder::getOrderStatus,
+                SalesOrderStatusEnum.PART_SHIP.getCode(),
+                SalesOrderStatusEnum.ALL_SHIP.getCode()
+        );
+        wrapper.ne(SalOrder::getPaymentStatus, 3); // 未全额收款
+        wrapper.orderByDesc(SalOrder::getCreateTime);
+        Page<SalOrder> entityPage = baseMapper.selectPage(page, wrapper);
+        List<SalOrderVO> voList = entityPage.getRecords().stream().map(this::convertVO).collect(Collectors.toList());
+        Page<SalOrderVO> res = new Page<>();
+        res.setTotal(entityPage.getTotal());
+        res.setRecords(voList);
+        return res;
+    }
+    @Override
+    public BigDecimal calcSingleOrderGross(Long orderId) {
+        SalOrder order = getById(orderId);
+        List<SalOrderItem> itemList = itemMapper.selectList(
+                new LambdaQueryWrapper<SalOrderItem>().eq(SalOrderItem::getOrderId, orderId)
+        );
+        // 总销售收入
+        BigDecimal totalSale = itemList.stream()
+                .map(SalOrderItem::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        // 总成本（出库加权成本）
+        BigDecimal totalCost = itemList.stream()
+                .map(item -> item.getUnitCost().multiply(item.getPlanQty()))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        // 毛利 = 销售总额 - 总成本
+        return totalSale.subtract(totalCost);
     }
 }

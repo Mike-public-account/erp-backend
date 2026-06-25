@@ -49,27 +49,7 @@ public class SalesOrderController {
         salesOrderService.cancelOrder(id);
         return R.ok();
     }
-    
-    @PostMapping("/ship")
-    @RequirePermission("sales:order:ship")
-    public R<Void> ship(@RequestBody @Valid SalesShipDTO dto) {
-        salesOrderService.shipGoods(dto);
-        return R.ok();
-    }
-    
-    @PostMapping("/pay")
-    @RequirePermission("sales:order:pay")
-    public R<Void> pay(@RequestBody @Valid SalesPaymentDTO dto) {
-        salesOrderService.receivePayment(dto);
-        return R.ok();
-    }
-    
-    @GetMapping("/export")
-    @RequirePermission("sales:order:export")
-    @DataScope(alias = "o", userIdColumn = "creator_id")
-    public void export(HttpServletResponse response) throws IOException {
-        salesOrderService.exportExcel(response);
-    }
+
     
     @PostMapping("/import")
     @RequirePermission("sales:order:import")
@@ -84,7 +64,7 @@ public class SalesOrderController {
     @OperationLog(module = "销售管理", operation = "新建销售单")
     public R<Long> create(@RequestBody @Valid SalesOrderSaveDTO dto, HttpServletRequest request) {
         Long userId = loginUserUtil.getLoginUserId(request);
-        Long orderId = salesOrderService.createSalesOrder(dto, userId);
+        Long orderId = salesOrderService.createOrder(dto, userId);
         return R.ok(orderId);
     }
 
@@ -93,7 +73,7 @@ public class SalesOrderController {
     @RequirePermission("sales:order:ship")
     @OperationLog(module = "销售管理", operation = "销售单发货出库")
     public R<Void> ship(@PathVariable Long id, @RequestParam Long warehouseId) {
-        salesOrderService.shipOrder(id, warehouseId);
+        salesOrderService.shipGoods(id, warehouseId);
         return R.ok();
     }
 
@@ -103,22 +83,22 @@ public class SalesOrderController {
     @OperationLog(module = "销售管理", operation = "销售收款核销")
     public R<Void> payment(@PathVariable Long id, @RequestBody @Valid SalesPaymentDTO dto) {
         dto.setOrderId(id);
-        salesOrderService.paymentWriteOff(dto);
+        salesOrderService.receivePayment(dto);
         return R.ok();
     }
 
     // 5. 账期预警分页
     @GetMapping("/credit-warning")
     @RequirePermission("sales:order:list")
-    public R<Page<SalOrderVO>> creditWarning(SalesPageDTO dto) {
+    public R<Page<SalOrderVO>> creditWarning(SalesOrderPageDTO dto) {
         return R.ok(salesOrderService.listCreditWarning(dto));
     }
 
     // 6. 销售导出
     @GetMapping("/export")
     @RequirePermission("sales:order:export")
-    public void export(SalesPageDTO dto, HttpServletResponse response) throws Exception {
-        List<SalOrderVO> dataList = salesOrderService.exportSalesOrder(dto);
+    public void export(SalesOrderPageDTO dto, HttpServletResponse response) throws Exception {
+        List<SalOrderVO> dataList = salesOrderService.exportExcel(dto,response);
         ExcelUtil.export(dataList, SalOrderVO.class, "销售订单", response);
     }
 

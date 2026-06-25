@@ -58,7 +58,6 @@ public class ProBomServiceImpl extends ServiceImpl<ProBomMapper, ProBom>
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void saveBom(BomSaveDTO dto) {
-        // 匹配DTO字段：productMaterialId / rawMaterialId / perUnitQty
         Long productId = dto.getProductMaterialId();
         Long rawMaterialId = dto.getRawMaterialId();
         BigDecimal perUnitQty = dto.getPerUnitQty();
@@ -80,7 +79,6 @@ public class ProBomServiceImpl extends ServiceImpl<ProBomMapper, ProBom>
             throw new BusinessException("BOM仅支持绑定原料物料");
         }
 
-        // 重复校验
         LambdaQueryWrapper<ProBom> existWrapper = new LambdaQueryWrapper<>();
         existWrapper.eq(ProBom::getProductId, productId)
                 .eq(ProBom::getMaterialId, rawMaterialId)
@@ -108,8 +106,8 @@ public class ProBomServiceImpl extends ServiceImpl<ProBomMapper, ProBom>
             throw new BusinessException("BOM记录不存在");
         }
 
-        Long rawMaterialId = dto.getRawMaterialId();
-        BigDecimal perUnitQty = dto.getPerUnitQty();
+        Long rawMaterialId = dto.getMaterialId();
+        BigDecimal perUnitQty = dto.getQtyPerUnit();
         BigDecimal lossRate = dto.getLossRate() == null ? BigDecimal.ZERO : dto.getLossRate();
         String remark = dto.getRemark();
 
@@ -147,31 +145,40 @@ public class ProBomServiceImpl extends ServiceImpl<ProBomMapper, ProBom>
         return bomList.stream().map(this::convertToVO).collect(Collectors.toList());
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteBom(Long id) {
+        ProBom bom = getById(id);
+        if (bom == null) {
+            throw new BusinessException("该BOM记录不存在");
+        }
+        removeById(id);
+    }
+
+    @Override
+    public BigDecimal calcProductBomCost(Long productId) {
+        // 后续自行实现成本递归计算逻辑，此处占位
+        return BigDecimal.ZERO;
+    }
+
     private BomVO convertToVO(ProBom bom) {
         BomVO vo = new BomVO();
-        // 主键
         vo.setId(bom.getId());
-        // 底层实体ID
         vo.setProductId(bom.getProductId());
         vo.setMaterialId(bom.getMaterialId());
-        // VO对外展示字段
         vo.setProductMaterialId(bom.getProductId());
         vo.setRawMaterialId(bom.getMaterialId());
-        // 用量损耗
         vo.setPerUnitQty(bom.getQtyPerUnit());
         vo.setLossRate(bom.getLossRate());
         vo.setRemark(bom.getRemark());
-        // 时间
         vo.setCreateTime(bom.getCreateTime());
         vo.setUpdateTime(bom.getUpdateTime());
 
-        // 查询原料信息
         BasMaterial rawMat = materialMapper.selectById(bom.getMaterialId());
         if (rawMat != null) {
             vo.setRawMaterialName(rawMat.getMaterialName());
             vo.setRawMaterialCode(rawMat.getMaterialCode());
         }
-        // 查询成品信息
         BasMaterial productMat = materialMapper.selectById(bom.getProductId());
         if (productMat != null) {
             vo.setProductMaterialName(productMat.getMaterialName());

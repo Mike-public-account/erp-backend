@@ -9,6 +9,8 @@ import java.math.BigDecimal;
 @Data
 @ApiModel("仓库保存参数")
 public class WarehouseSaveDTO {
+    @ApiModelProperty("仓库id")
+    private Long id;
     @NotBlank(message = "仓库编码不能为空")
     private String warehouseCode;
     @NotBlank(message = "仓库名称不能为空")

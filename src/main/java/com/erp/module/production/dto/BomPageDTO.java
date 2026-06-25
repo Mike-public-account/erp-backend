@@ -8,10 +8,16 @@ import javax.validation.constraints.Min;
 public class BomPageDTO {
     @Min(1)
     private Long pageNum = 1L;
+
     @Range(min = 1, max = 100)
     private Long pageSize = 10L;
-    private Long productMaterialId;
+
+    // 模糊搜索物料名称/编码，不属于实体业务字段，保留用于查询
     private String materialKeyword;
-    private Long productId; // 存成品物料ID
-    private Long materialId; // 存原料物料ID
+
+    // 和实体同名：成品物料ID
+    private Long productId;
+
+    // 和实体同名：原料子件物料ID
+    private Long materialId;
 }

@@ -14,20 +14,16 @@ import java.io.IOException;
 import java.util.List;
 
 public interface BasMaterialService extends IService<BasMaterial> {
-    // 原有单条CRUD
-    Page<BasMaterial> pageList(MaterialPageDTO dto);
-    void addMaterial(MaterialSaveDTO dto);
+    // 分页返回VO
+    Page<BasMaterialVO> pageList(MaterialPageDTO dto);
+    // 新增统一详情方法
+    BasMaterialVO getDetail(Long id);
+    Long addMaterial(MaterialSaveDTO dto);
     void updateMaterial(Long id, MaterialSaveDTO dto);
     void deleteMaterial(Long id);
-    BasMaterialVO getStockSummary(Long id);
-
-    // Excel导入导出（原有保留）
+    MaterialStockSummaryVO getStockSummary(Long id);
+    List<MaterialStockSummaryVO> getAllStockSummary(MaterialPageDTO dto);
+    void batchSaveOrUpdate(MaterialBatchDTO batchDTO);
     void importExcel(MultipartFile file) throws Exception;
     void exportExcel(MaterialPageDTO dto, HttpServletResponse response) throws IOException;
-
-    // 新增：批量编辑
-    void batchSaveOrUpdate(MaterialBatchDTO batchDTO);
-
-    // 新增：全物料库存汇总台账
-    List<MaterialStockSummaryVO> getAllStockSummary(MaterialPageDTO dto);
 }

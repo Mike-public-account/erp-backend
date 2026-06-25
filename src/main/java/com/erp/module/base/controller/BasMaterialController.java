@@ -8,7 +8,6 @@ import com.erp.common.result.R;
 import com.erp.module.base.dto.MaterialBatchDTO;
 import com.erp.module.base.dto.MaterialPageDTO;
 import com.erp.module.base.dto.MaterialSaveDTO;
-import com.erp.module.base.entity.BasMaterial;
 import com.erp.module.base.service.BasMaterialService;
 import com.erp.module.base.vo.BasMaterialVO;
 import com.erp.module.base.vo.MaterialStockSummaryVO;
@@ -25,32 +24,32 @@ import java.util.List;
 
 @Api(tags = "物料管理")
 @RestController
-@RequestMapping("/api/v1/base/material")
+@RequestMapping("/api/v1/base/materials") // 修复：material → materials 匹配文档
 @RequiredArgsConstructor
 public class BasMaterialController {
 
     private final BasMaterialService materialService;
 
     /**
-     * 分页查询物料列表
+     * 分页查询物料列表（统一/page规范，返回VO）
      */
     @GetMapping("/page")
     @ApiOperation("分页查询物料")
     @RequirePermission("base:material:list")
     @DataScope(alias = "m", userIdColumn = "creator_id")
-    public R<Page<BasMaterial>> page(@Valid MaterialPageDTO dto) {
+    public R<Page<BasMaterialVO>> page(@Valid MaterialPageDTO dto) {
         return R.ok(materialService.pageList(dto));
     }
 
     /**
-     * 根据ID查询物料详情
+     * 根据ID查询物料详情（统一/{id}标准接口）
      */
     @GetMapping("/{id}")
     @ApiOperation("物料单条详情")
     @RequirePermission("base:material:list")
     @DataScope
-    public R<BasMaterial> detail(@PathVariable Long id) {
-        return R.ok(materialService.getById(id));
+    public R<BasMaterialVO> detail(@PathVariable Long id) {
+        return R.ok(materialService.getDetail(id));
     }
 
     /**
@@ -60,9 +59,9 @@ public class BasMaterialController {
     @ApiOperation("新增物料")
     @RequirePermission("base:material:add")
     @OperationLog(module = "基础档案", operation = "新增物料")
-    public R<Void> add(@RequestBody @Valid MaterialSaveDTO dto) {
-        materialService.addMaterial(dto);
-        return R.ok();
+    public R<Long> add(@RequestBody @Valid MaterialSaveDTO dto) {
+        Long id = materialService.addMaterial(dto);
+        return R.ok(id);
     }
 
     /**
@@ -90,13 +89,13 @@ public class BasMaterialController {
     }
 
     /**
-     * 单物料库存汇总详情
+     * 单物料库存汇总详情（修复路径匹配文档 /{id}/stock-summary）
      */
-    @GetMapping("/stock/{id}")
+    @GetMapping("/{id}/stock-summary")
     @ApiOperation("查询单个物料库存详情")
     @RequirePermission("base:material:list")
     @DataScope
-    public R<BasMaterialVO> getStockSummary(@PathVariable Long id) {
+    public R<MaterialStockSummaryVO> getStockSummary(@PathVariable Long id) {
         return R.ok(materialService.getStockSummary(id));
     }
 

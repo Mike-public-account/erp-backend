@@ -38,6 +38,4 @@ public class MaterialSaveDTO {
     @ApiModelProperty("状态 0停用 1启用")
     private Integer status = 1;
 
-    @ApiModelProperty("备注")
-    private String remark;
 }

@@ -19,12 +19,18 @@ public class RoleController {
     @Resource
     private SysRoleService sysRoleService;
 
+    /**
+     * 角色分页列表（文档标准接口）
+     */
     @GetMapping
     @RequirePermission("system:role:list")
     public R<Page<RoleVO>> page(RolePageDTO dto) {
         return R.ok(sysRoleService.getRolePage(dto));
     }
 
+    /**
+     * 新增角色（文档缺失接口）
+     */
     @PostMapping
     @RequirePermission("system:role:add")
     @OperationLog(module = "角色管理", operation = "新增角色")
@@ -32,7 +38,6 @@ public class RoleController {
         sysRoleService.addRole(dto);
         return R.ok();
     }
-
     @DeleteMapping("/{id}")
     @RequirePermission("system:role:delete")
     @OperationLog(module = "角色管理", operation = "删除角色")
@@ -55,4 +60,6 @@ public class RoleController {
     public R<List<RoleVO>> all() {
         return R.ok(sysRoleService.listAllRole());
     }
+
+
 }

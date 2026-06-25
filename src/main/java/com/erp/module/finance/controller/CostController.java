@@ -32,4 +32,8 @@ public class CostController {
         costCalcService.manualCalc(period);
         return R.ok();
     }
+    @GetMapping("/period")
+    public R<Page<CostRecordVO>> getPeriodCost(@Valid CostQueryDTO dto) {
+        return R.ok(costCalcService.pageCost(dto));
+    }
 }

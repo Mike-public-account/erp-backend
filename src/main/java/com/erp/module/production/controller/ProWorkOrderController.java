@@ -20,7 +20,7 @@ import java.io.IOException;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/production/work-order")
+@RequestMapping("/api/v1/production/work-orders")
 public class ProWorkOrderController {
     @Resource
     private ProWorkOrderService workOrderService;
@@ -44,22 +44,29 @@ public class ProWorkOrderController {
         return R.ok(orderId);
     }
 
-    @PostMapping("/pick")
+    /**
+     * 领料出库
+     */
+    @PutMapping("/{id}/pick-material")
     @RequirePermission("production:workorder:pick")
     @OperationLog(module = "生产管理", operation = "工单原料领料")
-    public R<Void> pickMaterial(@RequestBody @Valid WorkOrderPickDTO dto) {
+    public R<Void> pickMaterial(@PathVariable Long id, @RequestBody @Valid WorkOrderPickDTO dto) {
+        dto.setWorkOrderId(id);
         workOrderService.pickMaterial(dto);
         return R.ok();
     }
 
-    @PostMapping("/finish")
+    /**
+     * 完工入库
+     */
+    @PutMapping("/{id}/finish")
     @RequirePermission("production:workorder:finish")
     @OperationLog(module = "生产管理", operation = "工单完工入库")
-    public R<Void> finish(@RequestBody @Valid WorkOrderFinishDTO dto) {
+    public R<Void> finish(@PathVariable Long id, @RequestBody @Valid WorkOrderFinishDTO dto) {
+        dto.setWorkOrderId(id);
         workOrderService.finishWorkOrder(dto);
         return R.ok();
     }
-
     @PutMapping("/cancel/{id}")
     @RequirePermission("production:workorder:cancel")
     @OperationLog(module = "生产管理", operation = "取消生产工单")
