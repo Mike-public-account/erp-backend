@@ -9,23 +9,31 @@ import com.erp.module.base.dto.MaterialBatchDTO;
 import com.erp.module.base.dto.MaterialPageDTO;
 import com.erp.module.base.dto.MaterialSaveDTO;
 import com.erp.module.base.entity.BasMaterial;
+import com.erp.module.base.entity.BasWarehouse;
 import com.erp.module.base.mapper.BasMaterialMapper;
+import com.erp.module.base.mapper.BasWarehouseMapper;
 import com.erp.module.base.service.BasMaterialService;
 import com.erp.module.base.vo.BasMaterialVO;
 import com.erp.module.base.vo.MaterialStockSummaryVO;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.annotation.Resource;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
 public class BasMaterialServiceImpl extends ServiceImpl<BasMaterialMapper, BasMaterial> implements BasMaterialService {
+    @Resource
+    private BasWarehouseMapper warehouseMapper;
 
     @Override
     public Page<BasMaterialVO> pageList(MaterialPageDTO dto) {
@@ -110,31 +118,19 @@ public class BasMaterialServiceImpl extends ServiceImpl<BasMaterialMapper, BasMa
 
     @Override
     public MaterialStockSummaryVO getStockSummary(Long id) {
-        // 此处为模板，实际需联查库存表组装库存数据
         BasMaterial material = getById(id);
         if (material == null) {
             throw new BusinessException("物料不存在");
         }
         MaterialStockSummaryVO vo = new MaterialStockSummaryVO();
         BeanUtils.copyProperties(material, vo);
-        // TODO 填充库存数量、可用库存等
-        return vo;
-    }
 
-    @Override
-    public List<MaterialStockSummaryVO> getAllStockSummary(MaterialPageDTO dto) {
-        LambdaQueryWrapper<BasMaterial> wrapper = new LambdaQueryWrapper<>();
-        if (StringUtils.hasText(dto.getKeyword())) {
-            wrapper.and(w -> w.like(BasMaterial::getMaterialCode, dto.getKeyword())
-                    .or().like(BasMaterial::getMaterialName, dto.getKeyword()));
-        }
-        List<BasMaterial> list = list(wrapper);
-        return list.stream().map(item -> {
-            MaterialStockSummaryVO vo = new MaterialStockSummaryVO();
-            BeanUtils.copyProperties(item, vo);
-            // TODO 批量填充库存
-            return vo;
-        }).collect(Collectors.toList());
+        // 库存字段直接取自物料实体，无需循环仓库/库存表
+        vo.setCurrentStock(material.getCurrentStock());
+        vo.setLockedStock(material.getLockedStock());
+        vo.setAvailableStock(material.getCurrentStock().subtract(material.getLockedStock()));
+
+        return vo;
     }
 
     @Override
@@ -165,5 +161,26 @@ public class BasMaterialServiceImpl extends ServiceImpl<BasMaterialMapper, BasMa
     public void exportExcel(MaterialPageDTO dto, HttpServletResponse response) throws IOException {
         Page<BasMaterialVO> voPage = pageList(dto);
         ExcelUtil.export(voPage.getRecords(), BasMaterialVO.class, "物料清单", response);
+    }
+    @Override
+    public List<MaterialStockSummaryVO> getAllStockSummary(MaterialPageDTO dto) {
+        LambdaQueryWrapper<BasMaterial> wrapper = new LambdaQueryWrapper<>();
+        if (StringUtils.hasText(dto.getKeyword())) {
+            wrapper.and(w -> w.like(BasMaterial::getMaterialCode, dto.getKeyword())
+                    .or().like(BasMaterial::getMaterialName, dto.getKeyword()));
+        }
+        List<BasMaterial> list = list(wrapper);
+        if (CollectionUtils.isEmpty(list)) {
+            return new ArrayList<>();
+        }
+        return list.stream().map(item -> {
+            MaterialStockSummaryVO vo = new MaterialStockSummaryVO();
+            BeanUtils.copyProperties(item, vo);
+            // 直接赋值库存，去掉循环查询仓库逻辑
+            vo.setCurrentStock(item.getCurrentStock());
+            vo.setLockedStock(item.getLockedStock());
+            vo.setAvailableStock(item.getCurrentStock().subtract(item.getLockedStock()));
+            return vo;
+        }).collect(Collectors.toList());
     }
 }
